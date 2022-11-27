@@ -1,1 +1,5 @@
-# Gateway_GUI_c-
+#Gateway GUI
+
+Proyecto final de programación avanzada 2022
+
+C++
