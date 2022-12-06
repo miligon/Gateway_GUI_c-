@@ -1,0 +1,6 @@
+E:\nextcloud\Mis Documentos\Documentos\1 MLG\Escuela\MAESTRIA\3er Semestre\ProgAvanzada\practicas\Gateway_GUI_c-\x64\Debug\Gateway.vcxproj.AssemblyReference.cache
+E:\nextcloud\Mis Documentos\Documentos\1 MLG\Escuela\MAESTRIA\3er Semestre\ProgAvanzada\practicas\Gateway_GUI_c-\x64\Debug\Gateway.htm
+E:\nextcloud\Mis Documentos\Documentos\1 MLG\Escuela\MAESTRIA\3er Semestre\ProgAvanzada\practicas\Gateway_GUI_c-\x64\Debug\Gateway.exe
+D:\nextcloud\Mis Documentos\Documentos\1 MLG\Escuela\MAESTRIA\3er Semestre\ProgAvanzada\practicas\Gateway_GUI_c-\x64\Debug\Gateway.vcxproj.AssemblyReference.cache
+D:\nextcloud\Mis Documentos\Documentos\1 MLG\Escuela\MAESTRIA\3er Semestre\ProgAvanzada\practicas\Gateway_GUI_c-\x64\Debug\Gateway.htm
+D:\nextcloud\Mis Documentos\Documentos\1 MLG\Escuela\MAESTRIA\3er Semestre\ProgAvanzada\practicas\Gateway_GUI_c-\x64\Debug\Gateway.exe
