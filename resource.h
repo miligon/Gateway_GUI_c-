@@ -37,6 +37,12 @@
 #define IDC_TXT_MASK                    1025
 #define IDC_TXT_GATEWAY                 1026
 #define IDC_TXT_INTERFACE               1027
+#define IDC_GRAPH                       1028
+#define IDC_BTN_OPENFILE                1029
+#define IDC_BTN_LOAD                    1029
+#define IDC_BTN_SAVE                    1030
+#define IDC_BUTTON2                     1030
+#define IDC_BUTTON3                     1031
 
 // Next default values for new objects
 // 
@@ -44,7 +50,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        132
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1025
+#define _APS_NEXT_CONTROL_VALUE         1032
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

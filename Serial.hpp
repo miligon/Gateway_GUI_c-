@@ -7,6 +7,7 @@ using namespace System;
 using namespace System::IO::Ports;
 using namespace System::Threading;
 
+
 ref class Serial
 {
 private:

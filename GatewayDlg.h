@@ -7,19 +7,34 @@
 class CDataThread : public CWinThread
 {
 private:
-	bool free_rx_buf;
+	int free_rx_buf;
 public:
 	CDataThread();
 	virtual BOOL InitInstance();
 	virtual int Run();
 	CString COMMport;
-	char txBuf[50];
+	char txBuf[256];
+	int txLen = 0;
 	char *rxBuf;
 	int rxlen;
 	bool tx_flag;
 	bool rx_flag;
+	bool binarySend_flag;
+	bool binaryRecieve_flag;
 	bool wait_rx(int time);
 	char active = 0;
+};
+
+struct GatewayRoute {
+	int destino;
+	int mascara;
+	int puerta_de_enlace;
+	char interfaz[6];
+};
+
+struct GatewayRouteTable {
+	int numDeRutas;
+	GatewayRoute* rutas;
 };
 
 // Cuadro de diálogo de CGatewayDlg
@@ -46,6 +61,9 @@ protected:
 	bool StatusConexion = False;
 	UINT_PTR tmrRefresh;
 	bool firstTime = true;
+	GatewayRouteTable tablaDeRuteo;
+
+	void renderRutas();
 
 	// Funciones de asignación de mensajes generadas
 	virtual BOOL OnInitDialog();
@@ -74,4 +92,9 @@ public:
 	CButton chkLed6;
 	afx_msg void OnBnClickedBtnSendroutes();
 	afx_msg void OnBnClickedBtnReadroutes();
+	afx_msg void OnBnClickedBtnAddroute();
+	afx_msg void OnBnClickedBtnOpen();
+	afx_msg void OnBnClickedBtnSave();
+	CListBox lstRoutes;
+	afx_msg void OnBnClickedBtnDelroute();
 };

@@ -1,7 +1,2 @@
-﻿  Gateway.cpp
-  GatewayDlg.cpp
-E:\nextcloud\Mis Documentos\Documentos\1 MLG\Escuela\MAESTRIA\3er Semestre\ProgAvanzada\practicas\Gateway_GUI_c-\GatewayDlg.cpp(254,20): warning C4101: 'e': variable local sin referencia
-  Generando código...
-E:\nextcloud\Mis Documentos\Documentos\1 MLG\Escuela\MAESTRIA\3er Semestre\ProgAvanzada\practicas\Gateway_GUI_c-\GatewayDlg.cpp(258): warning C4715: 'Decode': no todas las rutas de acceso de control devuelven un valor
-  Gateway.obj : se encontró un módulo MSIL; vinculación incremental deshabilitada para MSIL; ejecutando vínculo completo
-  Gateway.vcxproj -> E:\nextcloud\Mis Documentos\Documentos\1 MLG\Escuela\MAESTRIA\3er Semestre\ProgAvanzada\practicas\Gateway_GUI_c-\x64\Debug\Gateway.exe
+﻿  Gateway.obj : se encontró un módulo MSIL; vinculación incremental deshabilitada para MSIL; ejecutando vínculo completo
+  Gateway.vcxproj -> D:\nextcloud\Mis Documentos\Documentos\1 MLG\Escuela\MAESTRIA\3er Semestre\ProgAvanzada\practicas\Gateway_GUI_c-\x64\Debug\Gateway.exe

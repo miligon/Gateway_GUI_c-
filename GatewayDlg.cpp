@@ -26,18 +26,6 @@ struct GatewayData {
 	char LedStatus;
 } gateway_data;
 
-struct GatewayRoute {
-	int detino;
-	int mascara;
-	int puerta_de_enlace;
-	char interfaz[6];
-};
-
-struct GatewayRouteTable {
-	int numDeRutas;
-	GatewayRoute *rutas;
-};
-
 void DoEvents()
 {
 	MSG msg;
@@ -52,7 +40,9 @@ CDataThread::CDataThread() {}
 BOOL CDataThread::InitInstance(){
 	rx_flag = false;
 	tx_flag = false;
-	free_rx_buf = false;
+	free_rx_buf = 0;
+	binarySend_flag = false;
+	binaryRecieve_flag = false;
 	active = 0; 
 	return TRUE;
 }
@@ -97,20 +87,42 @@ int CDataThread::Run(){
 	TRACE(_T("Serial Thread started!"));
 	while (active == 2) {
 		if (puerto.Available() > 0 && rx_flag == false) {
-			if (free_rx_buf) {
+			if (free_rx_buf==1) {
 				Marshal::FreeHGlobal((IntPtr)rxBuf);
 			}
-			String^ data_leida = puerto.ReadLine();
-			rxBuf = (char *)Marshal::StringToHGlobalAnsi(data_leida).ToPointer();
-			rxlen = data_leida->Length;
-			rx_flag = true;
-			free_rx_buf = true;
+			if (free_rx_buf == 2) {
+				free(rxBuf);
+			}
+			if (binaryRecieve_flag) {
+				rxBuf = (char *)calloc(1, rxlen);
+				puerto.ReadChars((unsigned char *)rxBuf, rxlen);
+				binaryRecieve_flag = false;
+				rx_flag = true;
+				free_rx_buf = 2;
+
+			}
+			else {
+				String^ data_leida = puerto.ReadLine();
+				rxBuf = (char*)Marshal::StringToHGlobalAnsi(data_leida).ToPointer();
+				rxlen = data_leida->Length;
+				rx_flag = true;
+				free_rx_buf = 1;
+			}
 		}
 		if (this->tx_flag) {
-			String^ buf = gcnew String(txBuf);
-			puerto.WriteLine(buf);
+			if (binarySend_flag) {
+				puerto.Write((unsigned char *)txBuf, txLen);
+				binarySend_flag = false;
+			}
+			else
+			{
+				String^ buf = gcnew String(txBuf);
+				puerto.WriteLine(buf);
+			}
+
 			tx_flag = false;
 		}
+		Thread::Sleep(10);
 	}
 	puerto._serialPort->Close();
 	TRACE(_T("Serial Thread terminated!"));
@@ -173,6 +185,7 @@ void CGatewayDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_CHECK_LED4, chkLed4);
 	DDX_Control(pDX, IDC_CHECK_LED5, chkLed5);
 	DDX_Control(pDX, IDC_CHECK_LED6, chkLed6);
+	DDX_Control(pDX, IDC_LST_ROUTES, lstRoutes);
 }
 
 BEGIN_MESSAGE_MAP(CGatewayDlg, CDHtmlDialog)
@@ -188,6 +201,10 @@ ON_BN_CLICKED(IDC_CHECK_LED5, &CGatewayDlg::OnBnClickedCheckLed5)
 ON_BN_CLICKED(IDC_CHECK_LED6, &CGatewayDlg::OnBnClickedCheckLed6)
 ON_BN_CLICKED(IDC_BTN_SENDROUTES, &CGatewayDlg::OnBnClickedBtnSendroutes)
 ON_BN_CLICKED(IDC_BTN_READROUTES, &CGatewayDlg::OnBnClickedBtnReadroutes)
+ON_BN_CLICKED(IDC_BTN_ADDROUTE, &CGatewayDlg::OnBnClickedBtnAddroute)
+ON_BN_CLICKED(IDC_BTN_DELROUTE, &CGatewayDlg::OnBnClickedBtnDelroute)
+ON_BN_CLICKED(IDC_BTN_LOAD, &CGatewayDlg::OnBnClickedBtnOpen)
+ON_BN_CLICKED(IDC_BTN_SAVE, &CGatewayDlg::OnBnClickedBtnSave)
 END_MESSAGE_MAP()
 
 
@@ -233,6 +250,9 @@ BOOL CGatewayDlg::OnInitDialog()
 		wch = PtrToStringChars(puerto);
 		cmbPorts->AddString(wch);
 	}	
+	tablaDeRuteo.numDeRutas = 0;
+
+	lstRoutes.AddString(_T("DEST MASK GATEWAY INTERFAZ"));
 
 	return TRUE;  // Devuelve TRUE  a menos que establezca el foco en un control
 }
@@ -279,7 +299,7 @@ void CGatewayDlg::OnTimer(UINT_PTR nIDEvent)
 				}
 				else
 				{
-					CStringW data = _T("Rx(STR) -> ");
+					CStringW data = _T("\nRx(STR) -> ");
 
 					for (int i = 0; i < adapter->rxlen; i++) {
 						CStringW buf;
@@ -451,6 +471,7 @@ HRESULT CGatewayDlg::OnButtonCancel(IHTMLElement* /*pElement*/)
 
 void CGatewayDlg::send_led(int led, int val) {
 	if (StatusConexion) {
+		SetDlgItemText(IDC_LBL_ESTADO, L"Enviando comando de Leds ...");
 		unsigned char valor = ((val << 4) & 0xF0) + (led & 0x0F);
 		unsigned char frame[4] = { 'L', 1, valor, 'Z' };
 		memset(adapter->txBuf, 0, sizeof(adapter->txBuf));
@@ -546,17 +567,227 @@ void CGatewayDlg::OnBnClickedCheckLed6()
 void CGatewayDlg::OnBnClickedBtnSendroutes()
 {
 	// TODO: Agregue aquí su código de controlador de notificación de control
-	/*if (StatusConexion) {
-		unsigned char valor = ((val << 4) & 0xF0) + (led & 0x0F);
-		unsigned char frame[4] = { 'L', 1, valor, 'Z' };
+	if (StatusConexion) {
+		//while (adapter->rx_flag);
+		KillTimer(tmrRefresh);
+		adapter->rx_flag = false;
+		SetDlgItemText(IDC_LBL_ESTADO, L"Preparando tabla de ruteo . . .");
 		memset(adapter->txBuf, 0, sizeof(adapter->txBuf));
-		memcpy(adapter->txBuf, frame, 4);
+		int size = (sizeof(GatewayRoute) * tablaDeRuteo.numDeRutas);
+		adapter->txBuf[0] = 'W';
+		adapter->txBuf[1] = 1;
+		adapter->txBuf[2] = size;
+		adapter->txBuf[3] = 'Z';
 		adapter->tx_flag = true;
-	}*/
+		if (adapter->wait_rx())
+		{
+			if (adapter->rxlen >= 2) {
+				if (adapter->rxBuf[0] == 'O' && adapter->rxBuf[1] == 'K') {
+					SetDlgItemText(IDC_LBL_ESTADO, L"Enviando tabla de ruteo . . .");
+					memset(adapter->txBuf, 0, sizeof(adapter->txBuf));
+					memcpy(adapter->txBuf, tablaDeRuteo.rutas, size);
+					adapter->txLen = size;
+					adapter->binarySend_flag = true;
+					adapter->rx_flag = false;
+					adapter->tx_flag = true;
+					memset(adapter->rxBuf, 0, adapter->rxlen);
+					if (adapter->wait_rx())
+					{
+						if (adapter->rxlen >= 2) {
+							if (adapter->rxBuf[0] == 'O' && adapter->rxBuf[1] == 'K') {
+								SetDlgItemText(IDC_LBL_ESTADO, L"Enviado!");
+								Thread::Sleep(50);
+							}
+						}
+						adapter->rx_flag = false;
+					}
+				}
+			}
+			adapter->rx_flag = false;
+		}
+		tmrRefresh = SetTimer(1, 500, NULL); // one event every 1000 ms = 1 s
+	}
 }
 
 
 void CGatewayDlg::OnBnClickedBtnReadroutes()
 {
 	// TODO: Agregue aquí su código de controlador de notificación de control
+	if (StatusConexion) {
+		//while (adapter->rx_flag);
+		KillTimer(tmrRefresh);
+		adapter->rx_flag = false;
+		SetDlgItemText(IDC_LBL_ESTADO, L"Pidiendo tabla de ruteo . . .");
+		memset(adapter->txBuf, 0, sizeof(adapter->txBuf));
+		int size = (sizeof(GatewayRoute) * tablaDeRuteo.numDeRutas);
+		adapter->txBuf[0] = 'R';
+		adapter->txBuf[1] = 1;
+		adapter->txBuf[2] = 1;
+		adapter->txBuf[3] = 'Z';
+		adapter->tx_flag = true;
+		if (adapter->wait_rx())
+		{
+			if (adapter->rxlen >= 4) {
+				if (adapter->rxBuf[0] == 'R' && adapter->rxBuf[3] == 'Z') {
+					int size_struct = adapter->rxBuf[2];
+					SetDlgItemText(IDC_LBL_ESTADO, L"Recibiendo tabla de ruteo . . .");
+					memset(adapter->txBuf, 0, sizeof(adapter->txBuf));
+					adapter->txBuf[0] = 'O';
+					adapter->txBuf[1] = 'K';
+					adapter->rxlen = (int)size_struct;
+					adapter->binaryRecieve_flag = true;
+					adapter->rx_flag = false;
+					adapter->tx_flag = true;
+					if (adapter->wait_rx())
+					{
+						if (adapter->rxlen >= size_struct) {
+							tablaDeRuteo.numDeRutas = size_struct / sizeof(GatewayRoute);
+							tablaDeRuteo.rutas = (GatewayRoute*)malloc(size_struct);
+							memcpy(tablaDeRuteo.rutas, adapter->rxBuf, size_struct);
+							SetDlgItemText(IDC_LBL_ESTADO, L"Recibido!");
+							Thread::Sleep(50);
+							adapter->binaryRecieve_flag = false;
+							adapter->rx_flag = false;
+						}
+					}
+				}
+			}
+			adapter->rx_flag = false;
+		}
+		renderRutas();
+		tmrRefresh = SetTimer(1, 500, NULL); // one event every 1000 ms = 1 s
+	}
+}
+
+
+void CGatewayDlg::OnBnClickedBtnAddroute()
+{
+	// TODO: Agregue aquí su código de controlador de notificación de control
+	CStringW destino, netMask, gateway, interfaz;
+
+	GetDlgItemText(IDC_TXT_DST, destino);
+	GetDlgItemText(IDC_TXT_MASK, netMask);
+	GetDlgItemText(IDC_TXT_GATEWAY, gateway);
+	GetDlgItemText(IDC_TXT_INTERFACE, interfaz);
+
+	tablaDeRuteo.numDeRutas++;
+	//Se define un buffer
+	GatewayRoute *rutas = (GatewayRoute*)malloc(sizeof(GatewayRoute) * tablaDeRuteo.numDeRutas);
+
+	//Se realiza un backup de las tablas de ruteo existentes
+	memcpy(rutas, tablaDeRuteo.rutas, (sizeof(GatewayRoute) * (tablaDeRuteo.numDeRutas-1)));
+
+	//Se agrega la nueva ruta
+	rutas[tablaDeRuteo.numDeRutas - 1].destino = _wtoi(destino);
+	rutas[tablaDeRuteo.numDeRutas - 1].mascara = _wtoi(netMask);
+	rutas[tablaDeRuteo.numDeRutas - 1].puerta_de_enlace = _wtoi(gateway);
+
+	char* cstr = new char[6];
+	WideCharToMultiByte(CP_ACP, 0, interfaz, -1, rutas[tablaDeRuteo.numDeRutas - 1].interfaz, 6, NULL, NULL);
+
+	tablaDeRuteo.rutas = rutas;
+
+	renderRutas();
+}
+
+void CGatewayDlg::renderRutas() {
+	CStringW destino;
+	CStringW netMask;
+	CStringW gateway;
+	CStringW interfaz;
+
+	lstRoutes.ResetContent();
+	lstRoutes.AddString(_T("DEST MASK GATEWAY INTERFAZ"));
+
+	for (int i = 0; i < tablaDeRuteo.numDeRutas; i++) {
+		destino.Format(L"%d", tablaDeRuteo.rutas[i].destino);
+		netMask.Format(L"%d", tablaDeRuteo.rutas[i].mascara);
+		gateway.Format(L"%d", tablaDeRuteo.rutas[i].puerta_de_enlace);
+		interfaz = CStringW(tablaDeRuteo.rutas[i].interfaz,6);
+		
+		lstRoutes.InsertString(lstRoutes.GetCount(), (destino + "\t" + netMask + "\t" + gateway + "\t" + interfaz));
+	}
+}
+
+
+void CGatewayDlg::OnBnClickedBtnDelroute()
+{
+	// TODO: Agregue aquí su código de controlador de notificación de control
+	int seleccion = lstRoutes.GetCurSel();
+	if (seleccion > 0) {
+		// TODO: Agregue aquí su código de controlador de notificación de control
+		CStringW destino, netMask, gateway, interfaz;
+
+		GetDlgItemText(IDC_TXT_DST, destino);
+		GetDlgItemText(IDC_TXT_MASK, netMask);
+		GetDlgItemText(IDC_TXT_GATEWAY, gateway);
+		GetDlgItemText(IDC_TXT_INTERFACE, interfaz);
+
+		tablaDeRuteo.numDeRutas--;
+		//Se define un buffer
+		GatewayRoute* rutas = (GatewayRoute*)malloc(sizeof(GatewayRoute) * tablaDeRuteo.numDeRutas);
+
+		int indx = 0;
+		//Se realiza un backup de las tablas de ruteo existentes
+		for (int i = 0; i < tablaDeRuteo.numDeRutas + 1; i++)
+		{
+			if (i != seleccion - 1) {
+				rutas[indx] = tablaDeRuteo.rutas[i];
+				indx++;
+			}
+		}
+
+		tablaDeRuteo.rutas = rutas;
+
+		renderRutas();
+	}
+}
+
+void CGatewayDlg::OnBnClickedBtnOpen()
+{
+
+	CFileDialog x(TRUE, NULL,	NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("Tabla de ruteo (*.ruta)|*.ruta||"),NULL, 0,TRUE);
+
+	x.DoModal();
+	CStringW path = x.GetPathName();
+
+	CFile fd;
+
+	if (fd.Open(path, CFile::modeRead))
+	{
+		fd.Read(&tablaDeRuteo.numDeRutas, sizeof(int));
+		
+		free(tablaDeRuteo.rutas);
+		tablaDeRuteo.rutas = (GatewayRoute*)malloc(sizeof(GatewayRoute) * tablaDeRuteo.numDeRutas);
+		
+		fd.Seek(sizeof(int) + 1,0);
+		fd.Read(tablaDeRuteo.rutas, (sizeof(GatewayRoute) * tablaDeRuteo.numDeRutas));
+		fd.Close();
+		
+		renderRutas();
+	}
+	else {
+		AfxMessageBox(_T("No se pudo abrir el archivo"), MB_ICONERROR | MB_YESNO);
+	}
+}
+
+void CGatewayDlg::OnBnClickedBtnSave()
+{
+	CFileDialog x(FALSE, NULL, NULL, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT, _T("Tabla de ruteo (*.ruta)|*.ruta||"), NULL, 0, TRUE);
+
+	x.DoModal();
+	CStringW path = x.GetPathName();
+
+	CFile fd;
+
+	if (fd.Open(path, CFile::modeCreate | CFile::modeWrite))
+	{
+		fd.Write(&tablaDeRuteo.numDeRutas, sizeof(int));
+		fd.Seek(sizeof(int) + 1, 0);
+		fd.Write(tablaDeRuteo.rutas, sizeof(GatewayRoute)*tablaDeRuteo.numDeRutas);
+		fd.Close();
+	}
+	else {
+		AfxMessageBox(_T("No se pudo abrir el archivo"), MB_ICONERROR | MB_YESNO);
+	}
 }
